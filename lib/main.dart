@@ -8,7 +8,7 @@ import 'screens/splash_screen.dart';
 import 'screens/login_screen.dart';
 import 'screens/register_screen.dart';
 import 'screens/forgot_password_screen.dart';
-import 'screens/update_password_screen.dart';
+import 'screens/verify_token_screen.dart';
 import 'screens/dashboard_screen.dart';
 import 'screens/create_ticket_screen.dart';
 import 'screens/ticket_list_screen.dart';
@@ -43,7 +43,7 @@ class MyApp extends StatelessWidget {
         GetPage(name: AppRoutes.login, page: () => LoginScreen()),
         GetPage(name: AppRoutes.register, page: () => RegisterScreen()),
         GetPage(name: AppRoutes.forgotPassword, page: () => ForgotPasswordScreen()),
-        GetPage(name: '/update-password', page: () => const UpdatePasswordScreen()),
+        GetPage(name: AppRoutes.verifyToken, page: () => VerifyTokenScreen()),
         GetPage(name: AppRoutes.dashboard, page: () => DashboardScreen()),
         GetPage(name: AppRoutes.createTicket, page: () => CreateTicketScreen()),
         GetPage(name: AppRoutes.ticketList, page: () => TicketListScreen()),

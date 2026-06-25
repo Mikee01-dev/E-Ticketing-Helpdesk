@@ -1,3 +1,4 @@
+import 'package:e_ticketing_helpdesk/screens/verify_token_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../controllers/auth_controller.dart';
@@ -45,7 +46,7 @@ class ForgotPasswordScreen extends StatelessWidget {
             ),
             const SizedBox(height: 8),
             Text(
-              'Masukkan email Anda. Kami akan mengirimkan link untuk mereset password.',
+              'Masukkan email Anda. Kami akan mengirimkan kode reset 6 digit.',
               style: TextStyle(
                 fontSize: 14,
                 color: isDark ? Colors.white70 : Colors.grey[600],
@@ -95,7 +96,7 @@ class ForgotPasswordScreen extends StatelessWidget {
                 child: ElevatedButton(
                   onPressed: authController.isLoading.value
                       ? null
-                      : () => _sendResetEmail(),
+                      : () => _sendResetCode(),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.blue,
                     shape: RoundedRectangleBorder(
@@ -112,7 +113,7 @@ class ForgotPasswordScreen extends StatelessWidget {
                           ),
                         )
                       : const Text(
-                          'Kirim Link Reset',
+                          'Kirim Kode Reset',
                           style: TextStyle(fontSize: 16),
                         ),
                 ),
@@ -136,12 +137,13 @@ class ForgotPasswordScreen extends StatelessWidget {
     );
   }
 
-  void _sendResetEmail() async {
+  void _sendResetCode() async {
     final email = emailController.text.trim();
     if (email.isEmpty) {
       Get.snackbar('Error', 'Email tidak boleh kosong');
       return;
     }
-    await authController.resetPassword(email);
+    await authController.forgotPassword(email);
+    Get.to(() => VerifyTokenScreen());
   }
 }

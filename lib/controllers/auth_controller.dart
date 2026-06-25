@@ -125,27 +125,66 @@ class AuthController extends GetxController {
     }
   }
 
-Future<void> resetPassword(String email) async {
-  isLoading.value = true;
-  try {
-    // ✅ Tambahkan redirect ke halaman update password di Flutter
-    await supabase.auth.resetPasswordForEmail(
-      email.trim(),
-      redirectTo: 'http://localhost:56022/update-password', // Ganti dengan URL kamu
-    );
-    Get.back();
-    Get.snackbar(
-      'Sukses',
-      'Email reset password telah dikirim. Silakan cek email Anda.',
-      snackPosition: SnackPosition.TOP,
-      duration: const Duration(seconds: 4),
-    );
-  } catch (e) {
-    Get.snackbar('Error', 'Gagal mengirim email reset password: $e');
-  } finally {
-    isLoading.value = false;
+  Future<void> forgotPassword(String email) async {
+    isLoading.value = true;
+    try {
+      await supabase.auth.resetPasswordForEmail(email.trim());
+      Get.back();
+      Get.snackbar(
+        'Sukses',
+        'Kode reset password telah dikirim ke email Anda.',
+        snackPosition: SnackPosition.TOP,
+        duration: const Duration(seconds: 4),
+      );
+    } catch (e) {
+      Get.snackbar('Error', 'Gagal mengirim kode reset: $e');
+    } finally {
+      isLoading.value = false;
+    }
   }
-}
+
+  Future<bool> resetPasswordWithToken({
+    required String token,
+    required String newPassword,
+  }) async {
+    isLoading.value = true;
+    try {
+      // Ambil email dari session
+      final email = supabase.auth.currentUser?.email;
+      if (email == null) {
+        throw Exception('Email tidak ditemukan. Silakan login ulang.');
+      }
+
+      // Verifikasi token DENGAN EMAIL
+      await supabase.auth.verifyOTP(
+        type: OtpType.recovery,
+        token: token.trim(),
+        email: email, // 🔑 WAJIB!
+      );
+      
+      // Update password
+      await supabase.auth.updateUser(
+        UserAttributes(password: newPassword.trim()),
+      );
+      
+      // Logout
+      await supabase.auth.signOut();
+      
+      Get.snackbar(
+        'Sukses',
+        'Password berhasil diubah! Silakan login.',
+        snackPosition: SnackPosition.TOP,
+        duration: const Duration(seconds: 3),
+      );
+      
+      return true;
+    } catch (e) {
+      Get.snackbar('Error', 'Gagal reset password: ${e.toString()}');
+      return false;
+    } finally {
+      isLoading.value = false;
+    }
+  }
 
 Future<void> changePassword(String oldPassword, String newPassword) async {
   isLoading.value = true;
