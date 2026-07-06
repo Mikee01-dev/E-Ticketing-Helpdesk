@@ -64,13 +64,31 @@ class AuthController extends GetxController {
 
   Future<bool> login(String email, String password) async {
     isLoading.value = true;
-    try { // Request Body
+    try {
       final response = await supabase.auth.signInWithPassword(
         email: email.trim(),
         password: password,
       );
-
-      if (response.user != null) { // Response Success
+      
+      if (response.user != null) {
+        final profile = await supabase
+            .from('profiles')
+            .select('is_active')
+            .eq('id', response.user!.id)
+            .maybeSingle();
+        
+        if (profile != null && profile['is_active'] == false) {
+          await supabase.auth.signOut();
+          Get.snackbar(
+            'Akun Nonaktif',
+            'Akun Anda telah dinonaktifkan. Hubungi admin.',
+            snackPosition: SnackPosition.TOP,
+            backgroundColor: Colors.red,
+            colorText: Colors.white,
+          );
+          return false;
+        }
+        
         await fetchCurrentUser();
         isAuthenticated.value = true;
         Get.snackbar(
@@ -82,14 +100,8 @@ class AuthController extends GetxController {
         return true;
       }
       return false;
-    } on AuthException catch (e) { // Response Error
-      Get.snackbar(
-        'Login Gagal',
-        e.message,
-        snackPosition: SnackPosition.TOP,
-        backgroundColor: Colors.red,
-        colorText: Colors.white,
-      );
+    } on AuthException catch (e) {
+      Get.snackbar('Login Gagal', e.message);
       return false;
     } catch (e) {
       Get.snackbar('Error', 'Terjadi kesalahan: $e');

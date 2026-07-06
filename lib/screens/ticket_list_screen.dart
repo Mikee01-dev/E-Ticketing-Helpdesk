@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../controllers/ticket_controller.dart';
+import '../controllers/auth_controller.dart';
+import '../controllers/user_controller.dart';
 import '../widgets/ticket_card.dart';
 import '../widgets/empty_state_widget.dart';
+import '../models/user_model.dart';
 import 'ticket_detail_screen.dart';
 
 class TicketListScreen extends StatefulWidget {
@@ -14,16 +17,28 @@ class TicketListScreen extends StatefulWidget {
 
 class _TicketListScreenState extends State<TicketListScreen> {
   final ticketController = Get.find<TicketController>();
+  final authController = Get.find<AuthController>();
+  final userController = Get.find<UserController>();
+
+  List<UserModel> helpdesks = [];
 
   @override
   void initState() {
     super.initState();
     ticketController.fetchTickets();
+    _loadHelpdesks();
+  }
+
+  Future<void> _loadHelpdesks() async {
+    if (authController.isAdmin()) {
+      helpdesks = await userController.getAllHelpdesk();
+      setState(() {});
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final isAdmin = authController.isAdmin();
 
     return Scaffold(
       appBar: AppBar(
@@ -65,7 +80,7 @@ class _TicketListScreenState extends State<TicketListScreen> {
               return TicketCard(
                 ticket: ticket,
                 onTap: () => Get.to(
-                      () => TicketDetailScreen(ticketId: ticket.id),
+                  () => TicketDetailScreen(ticketId: ticket.id),
                 ),
               );
             },
@@ -77,6 +92,7 @@ class _TicketListScreenState extends State<TicketListScreen> {
 
   void _showFilterDialog() {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final isAdmin = authController.isAdmin();
 
     showModalBottomSheet(
       context: context,
@@ -108,6 +124,52 @@ class _TicketListScreenState extends State<TicketListScreen> {
                     ),
                   ),
                   const SizedBox(height: 16),
+                  if (isAdmin) ...[
+                    Text(
+                      'Helpdesk',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                        color: isDark ? Colors.white70 : Colors.black87,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                      decoration: BoxDecoration(
+                        border: Border.all(color: isDark ? Colors.grey[700]! : Colors.grey[300]!),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: DropdownButton<String>(
+                        isExpanded: true,
+                        underline: const SizedBox(),
+                        value: ticketController.filterHelpdesk.value,
+                        dropdownColor: isDark ? const Color(0xFF2C2C2C) : Colors.white,
+                        style: TextStyle(
+                          color: isDark ? Colors.white : Colors.black,
+                        ),
+                        items: [
+                          const DropdownMenuItem(
+                            value: 'all',
+                            child: Text('Semua Helpdesk'),
+                          ),
+                          ...helpdesks.map((h) {
+                            return DropdownMenuItem<String>(
+                              value: h.id,
+                              child: Text(h.name),
+                            );
+                          }),
+                        ],
+                        onChanged: (value) {
+                          if (value != null) {
+                            ticketController.setFilterHelpdesk(value);
+                            Navigator.pop(context);
+                          }
+                        },
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                  ],
 
                   // Filter Status
                   Text(
@@ -162,6 +224,9 @@ class _TicketListScreenState extends State<TicketListScreen> {
                       onPressed: () {
                         ticketController.setFilterStatus('all');
                         ticketController.setFilterPriority('all');
+                        if (isAdmin) {
+                          ticketController.setFilterHelpdesk('all');
+                        }
                         Navigator.pop(context);
                       },
                       style: OutlinedButton.styleFrom(
@@ -200,7 +265,7 @@ class _TicketListScreenState extends State<TicketListScreen> {
       selected: isSelected,
       onSelected: (_) {
         ticketController.setFilterStatus(value);
-        Navigator.pop(context); // Tutup dialog setelah pilih
+        Navigator.pop(context);
       },
       backgroundColor: isDark ? const Color(0xFF2C2C2C) : Colors.grey[200],
       selectedColor: Theme.of(context).primaryColor.withValues(alpha: 0.2),
@@ -222,7 +287,7 @@ class _TicketListScreenState extends State<TicketListScreen> {
       selected: isSelected,
       onSelected: (_) {
         ticketController.setFilterPriority(value);
-        Navigator.pop(context); // Tutup dialog setelah pilih
+        Navigator.pop(context);
       },
       backgroundColor: isDark ? const Color(0xFF2C2C2C) : Colors.grey[200],
       selectedColor: Theme.of(context).primaryColor.withValues(alpha: 0.2),

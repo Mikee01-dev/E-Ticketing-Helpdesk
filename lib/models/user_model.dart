@@ -5,6 +5,7 @@ class UserModel {
   final String role;
   final String? avatarUrl;
   final String? phone;
+  final bool isActive;
   final DateTime createdAt;
   final DateTime updatedAt;
 
@@ -15,6 +16,7 @@ class UserModel {
     required this.role,
     this.avatarUrl,
     this.phone,
+    required this.isActive,
     required this.createdAt,
     required this.updatedAt,
   });
@@ -27,6 +29,7 @@ class UserModel {
       role: map['role'] ?? 'user',
       avatarUrl: map['avatar_url'],
       phone: map['phone'],
+      isActive: map['is_active'] ?? true,
       createdAt: map['created_at'] != null
           ? DateTime.parse(map['created_at'])
           : DateTime.now(),

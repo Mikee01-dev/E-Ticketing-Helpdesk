@@ -98,24 +98,38 @@ class TicketController extends GetxController {
     tickets.refresh();
   }
 
+  // ==================== FILTER BY HELPDESK ====================
+  final RxString filterHelpdesk = 'all'.obs; // 🆕 Tambahkan ini
+
+  void setFilterHelpdesk(String helpdeskId) {
+    filterHelpdesk.value = helpdeskId;
+    applyFilters();
+  }
+
   void applyFilters() {
-    // Gunakan data asli berdasarkan role
-    final sourceList = authController.isHelpdesk()
-        ? allTickets.toList()
+    // ✅ Gunakan data asli berdasarkan role
+    final sourceList = authController.isHelpdesk() 
+        ? allTickets.toList() 
         : _allUserTickets.toList();
 
     var filtered = List<TicketModel>.from(sourceList);
 
+    // Filter by Status
     if (filterStatus.value != 'all') {
       filtered = filtered.where((t) => t.status == filterStatus.value).toList();
     }
 
+    // Filter by Priority
     if (filterPriority.value != 'all') {
       filtered = filtered.where((t) => t.priority == filterPriority.value).toList();
     }
 
-    tickets.value = filtered;
+    // ✅ FILTER BY HELPDESK (Admin only)
+    if (authController.isAdmin() && filterHelpdesk.value != 'all') {
+      filtered = filtered.where((t) => t.assignedTo == filterHelpdesk.value).toList();
+    }
 
+    tickets.value = filtered;
   }
 
   // ==================== CREATE TICKET ====================
@@ -388,6 +402,7 @@ class TicketController extends GetxController {
       return [];
     }
   }
+
 
   // ==================== DELETE TICKET (Admin only) ====================
   Future<bool> deleteTicket(String ticketId) async {

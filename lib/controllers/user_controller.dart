@@ -47,9 +47,9 @@ class UserController extends GetxController {
     try {
       final response = await supabase
           .from('profiles')
-          .select()
+          .select('id, name, role, avatar_url, phone, is_active, created_at, updated_at')
           .inFilter('role', ['helpdesk', 'admin']);
-
+      
       return response.map((e) => UserModel.fromMap(e)).toList();
     } catch (e) {
       debugPrint('Error getting helpdesk: $e');
@@ -103,13 +103,48 @@ class UserController extends GetxController {
     try {
       final response = await supabase
           .from('profiles')
-          .select()
+          .select('id, name, role, avatar_url, phone, is_active, created_at, updated_at')
           .order('created_at', ascending: false);
-
+      
       return response.map((e) => UserModel.fromMap(e)).toList();
     } catch (e) {
       debugPrint('Error getting all users: $e');
-      return [];  // Return kosong, tidak crash
+      return [];
+    }
+  }
+
+  Future<bool> toggleUserActive(String userId) async {
+    if (!authController.isAdmin()) {
+      Get.snackbar('Error', 'Hanya admin yang dapat mengelola user');
+      return false;
+    }
+
+    isLoading.value = true;
+    try {
+      // Ambil status saat ini
+      final current = await supabase
+          .from('profiles')
+          .select('is_active')
+          .eq('id', userId)
+          .single();
+      
+      final newStatus = !(current['is_active'] ?? true);
+      
+      await supabase
+          .from('profiles')
+          .update({'is_active': newStatus})
+          .eq('id', userId);
+      
+      Get.snackbar(
+        'Sukses',
+        newStatus ? 'User berhasil diaktifkan' : 'User berhasil dinonaktifkan'
+      );
+      return true;
+    } catch (e) {
+      Get.snackbar('Error', 'Gagal mengubah status user: $e');
+      return false;
+    } finally {
+      isLoading.value = false;
     }
   }
 }

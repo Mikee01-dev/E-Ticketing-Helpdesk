@@ -16,21 +16,20 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
   List<UserModel> filteredUsers = [];
   bool isLoading = true;
   String searchQuery = '';
-
+  
   @override
   void initState() {
     super.initState();
     _loadUsers();
   }
-
+  
   Future<void> _loadUsers() async {
     setState(() {
       isLoading = true;
     });
-
+    
     final data = await userController.getAllUsersSafe();
-
-    // Urutkan: Admin dulu, lalu Helpdesk, lalu User
+    
     data.sort((a, b) {
       final roleOrder = {'admin': 0, 'helpdesk': 1, 'user': 2};
       final orderA = roleOrder[a.role] ?? 3;
@@ -38,14 +37,14 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
       if (orderA != orderB) return orderA.compareTo(orderB);
       return a.name.compareTo(b.name);
     });
-
+    
     setState(() {
       users = data;
       filteredUsers = data;
       isLoading = false;
     });
   }
-
+  
   void _filterUsers(String query) {
     setState(() {
       searchQuery = query;
@@ -54,12 +53,12 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
       } else {
         filteredUsers = users.where((user) {
           return user.name.toLowerCase().contains(query.toLowerCase()) ||
-              user.email.toLowerCase().contains(query.toLowerCase());
+                 user.email.toLowerCase().contains(query.toLowerCase());
         }).toList();
       }
     });
   }
-
+  
   Future<void> _updateRole(UserModel user, String newRole) async {
     final success = await userController.updateUserRole(user.id, newRole);
     if (success) {
@@ -67,12 +66,19 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
       Get.snackbar('Sukses', 'Role ${user.name} diubah menjadi $newRole');
     }
   }
-
+  
+  Future<void> _toggleActive(UserModel user) async {
+    final success = await userController.toggleUserActive(user.id);
+    if (success) {
+      await _loadUsers();
+    }
+  }
+  
   @override
   Widget build(BuildContext context) {
     final currentUser = userController.authController.currentUser.value;
     final isDark = Theme.of(context).brightness == Brightness.dark;
-
+    
     return Scaffold(
       appBar: AppBar(
         title: const Text('Kelola User'),
@@ -115,80 +121,94 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
       body: isLoading
           ? const Center(child: CircularProgressIndicator())
           : filteredUsers.isEmpty
-          ? Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.search_off, size: 64, color: Colors.grey[400]),
-            const SizedBox(height: 16),
-            Text(
-              'User "$searchQuery" tidak ditemukan',
-              style: TextStyle(color: Colors.grey[600]),
-            ),
-          ],
-        ),
-      )
-          : RefreshIndicator(
-        onRefresh: _loadUsers,
-        child: ListView.builder(
-          itemCount: filteredUsers.length,
-          itemBuilder: (context, index) {
-            final user = filteredUsers[index];
-            final isCurrentUser = currentUser?.id == user.id;
-
-            return Card(
-              margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-              child: ListTile(
-                // ✅ Avatar dengan NetworkImage
-                leading: CircleAvatar(
-                  backgroundImage: user.avatarUrl != null && user.avatarUrl!.isNotEmpty
-                      ? NetworkImage(user.avatarUrl!)
-                      : null,
-                  backgroundColor: user.avatarUrl == null
-                      ? (user.role == 'admin' ? Colors.red
-                      : (user.role == 'helpdesk' ? Colors.blue : Colors.grey))
-                      : null,
-                  child: user.avatarUrl == null
-                      ? Text(user.name[0].toUpperCase())
-                      : null,
-                ),
-                title: Text(
-                  user.name,
-                  style: TextStyle(
-                    fontWeight: isCurrentUser ? FontWeight.bold : FontWeight.normal,
+              ? Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.search_off, size: 64, color: Colors.grey[400]),
+                      const SizedBox(height: 16),
+                      Text(
+                        'User "$searchQuery" tidak ditemukan',
+                        style: TextStyle(color: Colors.grey[600]),
+                      ),
+                    ],
                   ),
-                ),
-                subtitle: Text('${user.email} • Role: ${user.role}'),
-                trailing: isCurrentUser
-                    ? Chip(
-                  label: Text(
-                    'Anda',
-                    style: TextStyle(color: isDark ? Colors.white70 : Colors.black87),
-                  ),
-                  backgroundColor: isDark ? Colors.grey[800] : Colors.grey[200],
                 )
-                    : DropdownButton<String>(
-                  value: user.role,
-                  dropdownColor: isDark ? const Color(0xFF2C2C2C) : Colors.white,
-                  style: TextStyle(
-                    color: isDark ? Colors.white : Colors.black,
+              : RefreshIndicator(
+                  onRefresh: _loadUsers,
+                  child: ListView.builder(
+                    itemCount: filteredUsers.length,
+                    itemBuilder: (context, index) {
+                      final user = filteredUsers[index];
+                      final isCurrentUser = currentUser?.id == user.id;
+                      
+                      return Card(
+                        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                        child: ListTile(
+                          leading: CircleAvatar(
+                            backgroundImage: user.avatarUrl != null && user.avatarUrl!.isNotEmpty
+                                ? NetworkImage(user.avatarUrl!)
+                                : null,
+                            backgroundColor: user.avatarUrl == null || user.avatarUrl!.isEmpty
+                                ? (user.role == 'admin' 
+                                    ? Colors.red 
+                                    : (user.role == 'helpdesk' ? Colors.blue : Colors.grey))
+                                : null,
+                            child: user.avatarUrl == null || user.avatarUrl!.isEmpty
+                                ? Text(user.name[0].toUpperCase())
+                                : null,
+                          ),
+                          title: Text(
+                            user.name,
+                            style: TextStyle(
+                              fontWeight: isCurrentUser ? FontWeight.bold : FontWeight.normal,
+                            ),
+                          ),
+                          subtitle: Text('${user.email} • Role: ${user.role}'),
+                          trailing: isCurrentUser
+                              ? Chip(
+                                  label: Text(
+                                    'Anda',
+                                    style: TextStyle(color: isDark ? Colors.white70 : Colors.black87),
+                                  ),
+                                  backgroundColor: isDark ? Colors.grey[800] : Colors.grey[200],
+                                )
+                              : Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    IconButton(
+                                      icon: Icon(
+                                        user.isActive ? Icons.person_off : Icons.person,
+                                        color: user.isActive ? Colors.red : Colors.green,
+                                        size: 20,
+                                      ),
+                                      tooltip: user.isActive ? 'Nonaktifkan' : 'Aktifkan',
+                                      onPressed: () => _toggleActive(user),
+                                    ),
+                                    DropdownButton<String>(
+                                      value: user.role,
+                                      dropdownColor: isDark ? const Color(0xFF2C2C2C) : Colors.white,
+                                      style: TextStyle(
+                                        color: isDark ? Colors.white : Colors.black,
+                                      ),
+                                      items: const [
+                                        DropdownMenuItem(value: 'user', child: Text('User')),
+                                        DropdownMenuItem(value: 'helpdesk', child: Text('Helpdesk')),
+                                        DropdownMenuItem(value: 'admin', child: Text('Admin')),
+                                      ],
+                                      onChanged: (newRole) {
+                                        if (newRole != null && newRole != user.role) {
+                                          _updateRole(user, newRole);
+                                        }
+                                      },
+                                    ),
+                                  ],
+                                ),
+                        ),
+                      );
+                    },
                   ),
-                  items: const [
-                    DropdownMenuItem(value: 'user', child: Text('User')),
-                    DropdownMenuItem(value: 'helpdesk', child: Text('Helpdesk')),
-                    DropdownMenuItem(value: 'admin', child: Text('Admin')),
-                  ],
-                  onChanged: (newRole) {
-                    if (newRole != null && newRole != user.role) {
-                      _updateRole(user, newRole);
-                    }
-                  },
                 ),
-              ),
-            );
-          },
-        ),
-      ),
     );
   }
 }
